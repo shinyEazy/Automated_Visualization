@@ -1,15 +1,15 @@
-
 import dspy
 import dotenv
 import os
-
 
 dotenv.load_dotenv()
 
 lm = dspy.LM('openai/gpt-4o-mini', api_key=os.getenv('OPENAI_API_KEY'))
 dspy.configure(lm=lm)
 
+
 class Outline(dspy.Signature):
+    """Outline a thorough overview of a topic."""
 
     topic: str = dspy.InputField()
     title: str = dspy.OutputField()
@@ -40,3 +40,6 @@ class DraftArticle(dspy.Module):
 
 draft_article = DraftArticle()
 article = draft_article(topic="World Cup 2002")
+with open("output.txt", "w", encoding="utf-8") as f:
+    f.write(str(article))
+    print("Output saved to output.txt")
