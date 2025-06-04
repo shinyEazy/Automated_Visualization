@@ -176,9 +176,12 @@ if __name__ == "__main__":
     generator = AutoUIGenerator()
     
     # Generate UI for a task problem
-    task_problem_dir = "../problems/tabular_question_answering"
+    task_name = "tabular_question_answering_verified"
+    task_problem_dir = f"../problems/{task_name}"
     ui_html = generator.generate_ui(task_problem_dir)
-    generator.save_ui(ui_html, "generated_ui.html")
+
+    os.makedirs("../results", exist_ok=True)
+    generator.save_ui(ui_html, f"../results/{task_name}_generated_ui.html")
     
     print("UI Generator System initialized successfully!")
 

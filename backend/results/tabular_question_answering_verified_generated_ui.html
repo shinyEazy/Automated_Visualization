@@ -1,0 +1,113 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabular Question Answering</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .highlight {
+            background-color: yellow;
+        }
+        .example-display {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tabular Question Answering</h1>
+    <input type="file" id="fileInput" accept=".tsv">
+    <textarea id="questionInput" placeholder="Type your question here..." rows="4" cols="50"></textarea>
+    <button id="submitQuestion">Submit Question</button>
+    
+    <h2>Original Table</h2>
+    <div id="tableContainer"></div>
+    
+    <h2>Answer</h2>
+    <div id="answerContainer"></div>
+
+    <div class="example-display">
+        <h2>Example Cases for Tabular Question Answering</h2>
+        <ul>
+            <li>Example 1: What is the total sales for Q1 2023?</li>
+            <li>Example 2: How many products were sold in the Electronics category?</li>
+            <li>Example 3: What is the average price of items in the Furniture category?</li>
+            <li>Example 4: List all customers who made purchases over $1000.</li>
+            <li>Example 5: What is the highest revenue generated in a single transaction?</li>
+        </ul>
+    </div>
+
+    <script>
+        let tableData = [];
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    const rows = text.split('\n').map(row => row.split('\t'));
+                    tableData = rows;
+                    displayTable(rows);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function displayTable(rows) {
+            const tableContainer = document.getElementById('tableContainer');
+            tableContainer.innerHTML = '';
+            const table = document.createElement('table');
+            rows.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, cellIndex) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    td.setAttribute('data-row', rowIndex);
+                    td.setAttribute('data-cell', cellIndex);
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+            tableContainer.appendChild(table);
+        }
+
+        document.getElementById('submitQuestion').addEventListener('click', function() {
+            const question = document.getElementById('questionInput').value;
+            // Here you would typically send the question to your model and get the answer
+            const answer = "Sample Answer"; // Replace with actual model response
+            const highlightedCells = [[1, 2]]; // Replace with actual cell coordinates from the model response
+
+            displayAnswer(answer, highlightedCells);
+        });
+
+        function displayAnswer(answer, highlightedCells) {
+            const answerContainer = document.getElementById('answerContainer');
+            answerContainer.innerHTML = `<h2>Answer: ${answer}</h2>`;
+            highlightCells(highlightedCells);
+        }
+
+        function highlightCells(cells) {
+            cells.forEach(cell => {
+                const row = cell[0];
+                const col = cell[1];
+                const td = document.querySelector(`td[data-row="${row}"][data-cell="${col}"]`);
+                if (td) {
+                    td.classList.add('highlight');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+```
