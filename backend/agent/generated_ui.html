@@ -1,0 +1,98 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classification Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .image-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        img {
+            max-width: 200px;
+            max-height: 200px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Image Classification Application</h1>
+
+<h2>Upload Images</h2>
+<input type="file" id="imageUpload" multiple accept="image/*">
+<button id="uploadButton">Upload Images</button>
+<div class="image-container" id="imageContainer"></div>
+
+<h2>Classify New Image</h2>
+<input type="text" id="newImageUrl" placeholder="Enter image URL for classification">
+<button id="classifyButton">Classify Image</button>
+<div id="classificationResult"></div>
+
+<script>
+    const imageContainer = document.getElementById('imageContainer');
+    const classificationResult = document.getElementById('classificationResult');
+
+    document.getElementById('uploadButton').addEventListener('click', function() {
+        const files = document.getElementById('imageUpload').files;
+        imageContainer.innerHTML = ''; // Clear previous images
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const imgElement = document.createElement('img');
+                imgElement.src = event.target.result;
+
+                // Simulate prediction (replace with actual model prediction)
+                const predictedLabel = 'Label ' + (i + 1);
+                const probability = (Math.random() * 100).toFixed(2) + '%';
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'image-item';
+                itemDiv.innerHTML = `
+                    <img src="${event.target.result}" alt="Uploaded Image">
+                    <p>Predicted Label: ${predictedLabel}</p>
+                    <p>Probability: ${probability}</p>
+                `;
+                imageContainer.appendChild(itemDiv);
+            };
+
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('classifyButton').addEventListener('click', function() {
+        const imageUrl = document.getElementById('newImageUrl').value;
+        if (imageUrl) {
+            const imgElement = document.createElement('img');
+            imgElement.src = imageUrl;
+
+            // Simulate prediction for new image
+            const predictedLabel = "New Label"; // Placeholder for predicted label
+            const probability = (Math.random() * 100).toFixed(2) + '%'; // Placeholder for probability
+
+            classificationResult.innerHTML = '';
+            classificationResult.appendChild(imgElement);
+            classificationResult.innerHTML += `<p>Predicted Label: ${predictedLabel}</p><p>Probability: ${probability}</p>`;
+        } else {
+            alert("Please enter a valid image URL.");
+        }
+    });
+</script>
+
+</body>
+</html>
+```
