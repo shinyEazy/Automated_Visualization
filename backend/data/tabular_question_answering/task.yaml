@@ -1,0 +1,72 @@
+task_description:
+  type: Tabular Question Answering
+  description: |
+    This task involves answering natural language questions using structured tabular data. 
+    The model is expected to interpret the schema and contents of a table—consisting of rows, columns, and cell values—and locate or infer the correct answer based on the question. 
+    Reasoning may involve simple lookups, aggregation, or comparison across rows and columns.
+  input: |
+    A table provided in TSV (Tab-Separated Values) format, representing structured data, 
+    along with a natural language question that relates to the contents of the table. 
+    The table may include text, numeric, or categorical values.
+  output: |
+    A concise answer derived from the table data that correctly addresses the question. 
+    The answer may be a single value, a set of values, or a derived result (e.g., sum, count, average) depending on the question type.
+
+  visualize:
+    description: |
+      Display a list of input data. Each data item includes:
+        - The table of original data.
+        - The questions.
+        - The answers corresponding to the provided questions and data.
+        - Highlighted cells containing the answers in the table.
+    features:
+      - list_display:
+          description: Show a list of table-question-answer entries with highlighted answer positions.
+          fields:
+            - table_data: The original table data.
+            - questions: Questions related to the table.
+            - answers: Answers inferred from the table.
+            - highlighted_cells: Cell positions in the table corresponding to the answers.
+      - input_function:
+          description: Allow users to upload table data and enter questions for inference.
+          steps:
+            - Upload table data.
+            - Enter related questions.
+            - Display the inferred answers with highlighted positions.
+
+model_information:
+  api_url: ""
+  name: google/tapas-medium-finetuned-wtq
+  description: TAPAS is a BERT-like transformers model pretrained on a large corpus of English data from Wikipedia in a self-supervised fashion, which can then be used to extract features useful for downstream tasks such as answering questions about a table, or determining whether a sentence is entailed or refuted by the contents of a table. Fine-tuning is done by adding a cell selection head and aggregation head on top of the pre-trained model, and then jointly train these randomly initialized classification heads with the base model on SQa, WikiSQL and finally WTQ.
+  input_format: 
+    table: 
+      description: A dataframe of data provided to answer the queries.
+      type: DataFrame
+    queries: 
+      description: A list of queries that could be answered based on provided data.
+      type: List[str]
+  output_format: Predicted answer coordinates in dataframe and answers aggregation type (Eg. NONE, SUM, COUNT, AVERAGE).
+    answer_coordinaties: 
+      description: List of cells that could contain information for answering the queries.
+      type: List
+    aggregation_indices: 
+      description: Indices corresponse to the aggregation types that could combine information to form an answer.
+      type: List
+  parameters:
+    aggregation_labels:
+      "0": NONE,
+      "1": SUM,
+      "2": AVERAGE,
+      "3": COUNT
+
+dataset_description:
+  description: The WikiTableQuestions dataset is for the task of question answering on semi-structured HTML tables, which is stored in TSV format.
+  data_source: ./data/WikiTableQuestions.csv files
+  data_format: 
+    id: unique ID of the example
+    utterance: the question in its original format
+    context: the table used to answer the question, presented as file_path to this table
+    targetValue: the answer, possibly a |-separated list
+  additional_description: |
+    - The `context` refers to file_path of TSV file that contains table of contexts.
+    - This path is mapped to files in `csv/*`, which is in TSV format.
