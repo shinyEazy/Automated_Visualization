@@ -21,13 +21,25 @@ class TaskAnalysis(dspy.Signature):
     output_components: list[str] = dspy.OutputField(desc="List of output components needed (e.g., image display, text results)")
 
 class UIComponentGeneration(dspy.Signature):
-    """Generate specific UI component code based on task requirements."""
+    """Generate specific UI component code based on task requirements with the following design specifications:
+    - Use Tailwind CSS classes for styling.
+    - Color palette:
+      - Light green: rgb(214, 239, 216)
+      - Primary green: rgb(128, 175, 129)
+      - Secondary green: rgb(80, 141, 78)
+      - Dark green: rgb(26, 83, 25)
+    - Use monospace font: font-mono
+    - For containers: use p-4, rounded-2xl, shadow-lg
+    - For interactive elements: add hover effects, e.g., hover:shadow-xl, transition duration-300
+    - Buttons: use bg-[rgb(128,175,129)] text-white, hover:bg-[rgb(80,141,78)]
+    - Inputs: use border border-[rgb(80,141,78)] focus:ring focus:ring-[rgb(128,175,129)]
+    """
     
     task_type: str = dspy.InputField()
-    component_type: str = dspy.InputField(desc="Type of component to generate (input/output/display)")
+    component_type: str = dspy.InputField(desc="Type of component to generate (e.g., input_file, output_image)")
     requirements: str = dspy.InputField(desc="Specific requirements for this component")
     model_info: str = dspy.InputField(desc="Model API information and format requirements")
-    component_code: str = dspy.OutputField(desc="HTML/JavaScript code for the component")
+    component_code: str = dspy.OutputField(desc="HTML/JavaScript code for the component with appropriate Tailwind CSS classes")
 
 class APIIntegration(dspy.Signature):
     """Generate API integration code for model interaction."""
@@ -39,13 +51,25 @@ class APIIntegration(dspy.Signature):
     integration_code: str = dspy.OutputField(desc="JavaScript code for API integration")
 
 class UILayoutGeneration(dspy.Signature):
-    """Generate complete UI layout combining all components."""
+    """Generate complete UI layout combining all components with the following design specifications:
+    - Use Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
+    - Overall page:
+      - Background: bg-[rgb(214,239,216)]
+      - Text color: text-[rgb(26,83,25)]
+      - Font: font-mono
+    - Layout:
+      - Use flex or grid for responsive design (e.g., flex flex-col md:flex-row)
+      - Components in cards: bg-white p-6 m-4 rounded-2xl shadow-lg
+      - Header: bg-[rgb(128,175,129)] text-white p-4 with title and description
+    - Include API integration code in a <script> tag at the end.
+    """
     
-    task_description: str = dspy.InputField()
-    input_components: list[str] = dspy.InputField()
-    output_components: list[str] = dspy.InputField()
-    api_integration: str = dspy.InputField()
-    complete_html: str = dspy.OutputField(desc="Complete HTML page with CSS and JavaScript")
+    task_name: str = dspy.InputField(desc="Name of the task")
+    task_description: str = dspy.InputField(desc="Description of the task")
+    input_components: list[str] = dspy.InputField(desc="List of HTML strings for input components")
+    output_components: list[str] = dspy.InputField(desc="List of HTML strings for output components")
+    api_integration: str = dspy.InputField(desc="JavaScript code for API integration")
+    complete_html: str = dspy.OutputField(desc="Complete HTML page with CSS and JavaScript, styled according to the design specifications")
 
 class UIGenerator(dspy.Module):
     def __init__(self):
@@ -106,7 +130,8 @@ class UIGenerator(dspy.Module):
         
         # Step 6: Generate complete UI layout
         complete_ui = self.generate_layout(
-            task_description=task_data.get('task', {}).get('description', ''),
+            task_name=task_data.get('task', {}).get('name', 'Untitled Task'),
+            task_description=task_data.get('task', {}).get('description', 'No description provided.'),
             input_components=input_components,
             output_components=output_components,
             api_integration=api_integration.integration_code
@@ -176,49 +201,15 @@ if __name__ == "__main__":
     generator = AutoUIGenerator()
     
     # Generate UI for a task problem
-    task_name = "tabular_question_answering_verified"
+    task_name = "audio_classification_verified"
     task_problem_dir = f"../problems/{task_name}"
     ui_html = generator.generate_ui(task_problem_dir)
-    if ui_html.startswith("```html"):
-        ui_html = ui_html[len("```html"):].lstrip()
-    if ui_html.endswith("```"):
-        ui_html = ui_html[:-len("```")].rstrip()
+    ui_html = "\n".join(
+        line for line in ui_html.splitlines()
+        if "```" not in line
+    )
 
     os.makedirs("../results", exist_ok=True)
     generator.save_ui(ui_html, f"../results/{task_name}_generated_ui.html")
     
     print("UI Generator System initialized successfully!")
-
-# Additional utility functions for specific task types
-# class TaskSpecificHandlers:
-#     """Handlers for specific task types"""
-    
-#     @staticmethod
-#     def handle_image_classification(task_data: Dict) -> Dict:
-#         """Specific handling for image classification tasks"""
-#         return {
-#             'input_component': 'file_upload_image',
-#             'output_component': 'classification_results',
-#             'preprocessing': 'image_resize_normalize',
-#             'postprocessing': 'confidence_scores_display'
-#         }
-    
-#     @staticmethod
-#     def handle_image_to_text(task_data: Dict) -> Dict:
-#         """Specific handling for image to text tasks"""
-#         return {
-#             'input_component': 'file_upload_image',
-#             'output_component': 'text_display',
-#             'preprocessing': 'image_encode_base64',
-#             'postprocessing': 'text_formatting'
-#         }
-    
-#     @staticmethod
-#     def handle_text_classification(task_data: Dict) -> Dict:
-#         """Specific handling for text classification tasks"""
-#         return {
-#             'input_component': 'text_input_area',
-#             'output_component': 'classification_results',
-#             'preprocessing': 'text_tokenization',
-#             'postprocessing': 'confidence_scores_display'
-#         }

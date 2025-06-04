@@ -22,7 +22,7 @@ task_description:
             - Display the prediction result (bounding box, class).
 
 model_information:
-  api_url: ""
+  api_url: "https://api.ultralytics.com/v1/detect"
   name: ultralytics/yolo11
   description: The model was trained on the COCO dataset.
   architectures: YOLO
@@ -50,9 +50,7 @@ model_information:
           type: float
         description: "Bounding box coordinates [x1, y1, x2, y2]"
         example: [100.5, 200.3, 300.7, 400.2]
-    
 
 dataset_description:
   data_path: ./data
   supported_formats: jpg, jpeg, png
-
