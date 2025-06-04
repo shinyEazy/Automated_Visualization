@@ -1,0 +1,67 @@
+task_description:
+  type: Audio Classification
+  description: |
+    This task focuses on detecting and classifying the emotional state of a speaker from an audio recording. 
+    The system analyzes vocal cues—such as tone, pitch, intensity, and rhythm—to determine which emotion the speaker is expressing. 
+    The goal is to categorize the audio into one of several predefined emotional labels (e.g., "sad", "happy", "angry", "neutral", "disgust", "fearful", "surprised").
+  input: |
+    An audio clip containing a spoken utterance or vocal segment from a single speaker. 
+    The recording should include clear vocal characteristics that reflect emotional expression. 
+  output: |
+    A single emotion label representing the predicted emotional state of the speaker. 
+    The label is one of the following: "happy", "sad", "angry", "neutral", "disgust", "fearful", or "surprised". 
+    Optionally, a confidence score may be provided for each emotion to indicate prediction certainty.
+
+  visualize:
+    description: |
+      Display a list of input and corresponding output pairs. Each data item includes:
+        - The audio clip containing a short speech from a speaker.
+        - The emotion labels (e.g., "sad", "happy", "angry", "neutral", "disgust", "fearful", "surprised") and their scores (probabilities).
+        - An emoji corresponding to the predicted emotion.
+    features:
+      - list_display:
+          description: Show a list of audio clips and their inferred emotion results.
+          fields:
+            - audio_clip: The input audio file.
+            - predicted_emotions: The emotion labels with associated probabilities.
+            - emotion_emoji: Emoji corresponding to the predicted dominant emotion.
+      - input_function:
+          description: Allow users to upload their own audio files (wav) for emotion inference.
+          steps:
+            - Upload an audio file (wav).
+            - Display the inferred emotions with probabilities and emoji.
+
+model_information:
+  api_url: ""
+  name: firdhokk/speech-emotion-recognition-with-openai-whisper-large-v3
+  description: This model leverages the Whisper model to recognize emotions in speech. The goal is to classify audio recordings into different emotional categories, such as Happy, Sad, Surprised, and etc.
+  input_format: 
+    format: tensor
+    description: Audio data read from audio file by using some popular libraries, such as librosa, soundfile.
+  output_format: 
+    format: tensor
+    description: A list of scores (probabilities) corresponse to each emotion.
+  parameters:
+    id2label: 
+      "0": angry
+      "1": disgust
+      "2": fearful
+      "3": happy
+      "4": neutral
+      "5": sad
+      "6": surprised
+    label2id:
+      angry: 0
+      disgust: 1
+      fearful: 2
+      happy: 3
+      neutral: 4
+      sad: 5
+      surprised: 6
+
+dataset_description:
+  description: The Ryerson Audio-Visual Database of Emotional Speech and Song (RAVDESS) contains 24 professional actors (12 female, 12 male), vocalizing two lexically-matched statements in a neutral North American accent. Speech includes calm, happy, sad, angry, fearful, surprise, disgust expressions and neutral.
+  data_source: .wav file in folders ./data/Actor_..../.
+  data_format: .wav file.
+  additional_description: |
+    - Dataset contains lots of speakers corresponding to one folder. Each folder includes wav files, which is a short speech segment or vocal expression from a speaker.

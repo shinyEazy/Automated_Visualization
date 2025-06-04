@@ -1,0 +1,58 @@
+task_description:
+  type: Object detection in image
+  description: Can upload a single image or an image folder. The image is a single image containing the object to be detected. Using the model, detect the object in the image and draw the bounding box on the image. Visualize the image and the predicted bounding box.
+  input: A single image containing the object to be detected.
+  output: The image with the bounding box of the object in the image.
+
+  visualize:
+    description: |
+      Display a list of input data along with the predicted object detection results. Each data item includes:
+        - The input image
+        - The image with the predicted bounding box of the object and the predicted class of the bounding box in the image
+    features:
+      - list_display:
+          description: Show a list of input data and their prediction results.
+          fields:
+            - input_image: The input image.
+            - predicted_bounding_box: The predicted bounding box of the object and the predicted class of the bounding box in the image.
+      - input_function:
+          description: Allow users to enter new images for object detection.
+          steps:
+            - Enter a list of images.
+            - Display the prediction result (bounding box, class).
+
+model_information:
+  api_url: ""
+  name: ultralytics/yolo11
+  description: The model was trained on the COCO dataset.
+  architectures: YOLO
+  input_format:
+    format: base64
+    encoding: UTF-8
+    description: The input is a base64 encoded image.
+  output_format:
+    description: The output is a list of objects with the properties class, class_name, confidence, bbox.
+    format: array
+    items:
+      properties:
+      class:
+        type: integer
+        description: "ID of class"
+      class_name:
+        type: string
+        description: "Name of class"
+      confidence:
+        type: float
+        description: "Confidence score"
+      bbox:
+        type: array
+        items:
+          type: float
+        description: "Bounding box coordinates [x1, y1, x2, y2]"
+        example: [100.5, 200.3, 300.7, 400.2]
+    
+
+dataset_description:
+  data_path: ./data
+  supported_formats: jpg, jpeg, png
+
