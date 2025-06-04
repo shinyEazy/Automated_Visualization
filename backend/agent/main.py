@@ -179,6 +179,10 @@ if __name__ == "__main__":
     task_name = "tabular_question_answering_verified"
     task_problem_dir = f"../problems/{task_name}"
     ui_html = generator.generate_ui(task_problem_dir)
+    if ui_html.startswith("```html"):
+        ui_html = ui_html[len("```html"):].lstrip()
+    if ui_html.endswith("```"):
+        ui_html = ui_html[:-len("```")].rstrip()
 
     os.makedirs("../results", exist_ok=True)
     generator.save_ui(ui_html, f"../results/{task_name}_generated_ui.html")
@@ -186,35 +190,35 @@ if __name__ == "__main__":
     print("UI Generator System initialized successfully!")
 
 # Additional utility functions for specific task types
-class TaskSpecificHandlers:
-    """Handlers for specific task types"""
+# class TaskSpecificHandlers:
+#     """Handlers for specific task types"""
     
-    @staticmethod
-    def handle_image_classification(task_data: Dict) -> Dict:
-        """Specific handling for image classification tasks"""
-        return {
-            'input_component': 'file_upload_image',
-            'output_component': 'classification_results',
-            'preprocessing': 'image_resize_normalize',
-            'postprocessing': 'confidence_scores_display'
-        }
+#     @staticmethod
+#     def handle_image_classification(task_data: Dict) -> Dict:
+#         """Specific handling for image classification tasks"""
+#         return {
+#             'input_component': 'file_upload_image',
+#             'output_component': 'classification_results',
+#             'preprocessing': 'image_resize_normalize',
+#             'postprocessing': 'confidence_scores_display'
+#         }
     
-    @staticmethod
-    def handle_image_to_text(task_data: Dict) -> Dict:
-        """Specific handling for image to text tasks"""
-        return {
-            'input_component': 'file_upload_image',
-            'output_component': 'text_display',
-            'preprocessing': 'image_encode_base64',
-            'postprocessing': 'text_formatting'
-        }
+#     @staticmethod
+#     def handle_image_to_text(task_data: Dict) -> Dict:
+#         """Specific handling for image to text tasks"""
+#         return {
+#             'input_component': 'file_upload_image',
+#             'output_component': 'text_display',
+#             'preprocessing': 'image_encode_base64',
+#             'postprocessing': 'text_formatting'
+#         }
     
-    @staticmethod
-    def handle_text_classification(task_data: Dict) -> Dict:
-        """Specific handling for text classification tasks"""
-        return {
-            'input_component': 'text_input_area',
-            'output_component': 'classification_results',
-            'preprocessing': 'text_tokenization',
-            'postprocessing': 'confidence_scores_display'
-        }
+#     @staticmethod
+#     def handle_text_classification(task_data: Dict) -> Dict:
+#         """Specific handling for text classification tasks"""
+#         return {
+#             'input_component': 'text_input_area',
+#             'output_component': 'classification_results',
+#             'preprocessing': 'text_tokenization',
+#             'postprocessing': 'confidence_scores_display'
+#         }
