@@ -22,17 +22,21 @@ task_description:
             - Display the prediction result (bounding box, class).
 
 model_information:
-  api_url: "https://api.ultralytics.com/v1/detect"
+  api_url: "http://34.87.113.245:8000/api/object-detect"
   name: ultralytics/yolo11
   description: The model was trained on the COCO dataset.
   architectures: YOLO
   input_format:
-    format: base64
-    encoding: UTF-8
-    description: The input is a base64 encoded image.
+    type: json
+    structure:
+      data:
+        type: base64
+        encoding: UTF-8
+        description: The input is a base64 encoded image.
+        
   output_format:
     description: The output is a list of objects with the properties class, class_name, confidence, bbox.
-    format: array
+    type: array
     items:
       properties:
       class:
@@ -50,7 +54,9 @@ model_information:
           type: float
         description: "Bounding box coordinates [x1, y1, x2, y2]"
         example: [100.5, 200.3, 300.7, 400.2]
+    
 
 dataset_description:
   data_path: ./data
   supported_formats: jpg, jpeg, png
+

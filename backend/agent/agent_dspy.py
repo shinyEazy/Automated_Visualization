@@ -29,10 +29,17 @@ class UIComponentGeneration(dspy.Signature):
       - Secondary green: rgb(80, 141, 78)
       - Dark green: rgb(26, 83, 25)
     - Use monospace font: font-mono
-    - For containers: use p-4, rounded-2xl, shadow-lg
-    - For interactive elements: add hover effects, e.g., hover:shadow-xl, transition duration-300
-    - Buttons: use bg-[rgb(128,175,129)] text-white, hover:bg-[rgb(80,141,78)]
-    - Inputs: use border border-[rgb(80,141,78)] focus:ring focus:ring-[rgb(128,175,129)]
+    - Each component must have a unique ID: "{component_type}-{task_type}", e.g., "input-file-image_classification"
+    - For containers: p-4 rounded-2xl shadow-lg bg-white
+    - For interactive elements: hover:shadow-xl transition duration-300
+    - Buttons: bg-[rgb(128,175,129)] text-white px-4 py-2 rounded hover:bg-[rgb(80,141,78)] transition duration-300
+    - Inputs: w-full p-2 border border-[rgb(80,141,78)] rounded focus:ring-2 focus:ring-[rgb(128,175,129)] focus:outline-none
+    - Specific components:
+      - File inputs: <input type="file" class="..."> with accept attribute if specified
+      - Text inputs: <textarea> or <input type="text"> based on requirements, with class "w-full p-2 ..."
+      - Images: <img class="max-w-full h-auto rounded-lg">
+      - Text outputs: <p class="text-lg mt-2">
+      - Example display: List examples in <div class="p-4 bg-gray-100 rounded-lg mb-4"> with a button <button class="bg-[rgb(80,141,78)] text-white px-3 py-1 rounded hover:bg-[rgb(26,83,25)]" onclick="loadExample(index)">Load Example</button>, include <script> with const examples = [...]
     """
     
     task_type: str = dspy.InputField()
@@ -42,12 +49,20 @@ class UIComponentGeneration(dspy.Signature):
     component_code: str = dspy.OutputField(desc="HTML/JavaScript code for the component with appropriate Tailwind CSS classes")
 
 class APIIntegration(dspy.Signature):
-    """Generate API integration code for model interaction."""
+    """Generate API integration code for model interaction with the following requirements:
+    - Include functions to:
+      - Collect inputs from components using their unique IDs
+      - Format inputs per the model's input_format
+      - Send a POST request to api_url with formatted data
+      - Parse response per output_format and update output components by ID
+    - Add event listener to submit button (id="submit-btn") to trigger the process
+    - If examples exist, define loadExample(index) to populate input components with example data
+    - Optionally, add loading state (e.g., disable button, show spinner) and error handling (e.g., show error message)
+    """
     
     api_url: str = dspy.InputField()
     input_format: str = dspy.InputField()
     output_format: str = dspy.InputField()
-    sample_code: str = dspy.InputField(desc="Sample code or usage notes if available")
     integration_code: str = dspy.OutputField(desc="JavaScript code for API integration")
 
 class UILayoutGeneration(dspy.Signature):
@@ -57,17 +72,23 @@ class UILayoutGeneration(dspy.Signature):
       - Background: bg-[rgb(214,239,216)]
       - Text color: text-[rgb(26,83,25)]
       - Font: font-mono
-    - Layout:
-      - Use flex or grid for responsive design (e.g., flex flex-col md:flex-row)
-      - Components in cards: bg-white p-6 m-4 rounded-2xl shadow-lg
-      - Header: bg-[rgb(128,175,129)] text-white p-4 with title and description
-    - Include API integration code in a <script> tag at the end.
+    - Structure:
+      - Wrap in <div class="min-h-screen bg-[rgb(214,239,216)] text-[rgb(26,83,25)] font-mono">
+      - Header: <div class="bg-[rgb(128,175,129)] text-white p-4 sticky top-0 z-10"> with <h1 class="text-2xl font-bold">{task_name}</h1> and <p class="mt-1">{task_description}</p>
+      - Main content: <main class="container mx-auto p-4">
+      - Layout: <div class="flex flex-col md:flex-row gap-6">
+        - Inputs: <div class="flex-1 bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"> with input_components and <button id="submit-btn" class="mt-4 bg-[rgb(128,175,129)] text-white px-4 py-2 rounded hover:bg-[rgb(80,141,78)] transition duration-300">Submit</button>
+        - Outputs: <div class="flex-1 bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"> with output_components
+      - Examples (if provided): <div class="mt-6 bg-white p-6 rounded-2xl shadow-lg">{example_component}</div>
+    - Include api_integration in <script> at the end of <body>
+    - Ensure responsiveness: Stack vertically on small screens, side-by-side on medium+ screens
     """
     
     task_name: str = dspy.InputField(desc="Name of the task")
     task_description: str = dspy.InputField(desc="Description of the task")
     input_components: list[str] = dspy.InputField(desc="List of HTML strings for input components")
     output_components: list[str] = dspy.InputField(desc="List of HTML strings for output components")
+    example_component: str = dspy.InputField(desc="HTML string for example display component", default=None)
     api_integration: str = dspy.InputField(desc="JavaScript code for API integration")
     complete_html: str = dspy.OutputField(desc="Complete HTML page with CSS and JavaScript, styled according to the design specifications")
 
@@ -84,19 +105,20 @@ class UIGenerator(dspy.Module):
             task_yaml_content = f.read()
         
         task_data = yaml.safe_load(task_yaml_content)
-        
+        # print('task_data', task_data)
+
         # Step 1: Analyze task requirements
         analysis = self.analyze_task(task_yaml_content=task_yaml_content)
-        
+        # print('analsys', analysis)
+
         # Step 2: Generate API integration code
-        model_info = task_data.get('model', {})
+        model_info = task_data.get('model_information', {})
         api_integration = self.generate_api_integration(
             api_url=model_info.get('api_url', ''),
             input_format=str(model_info.get('input_format', {})),
             output_format=str(model_info.get('output_format', {})),
-            sample_code=model_info.get('sample_code', '')
         )
-        
+
         # Step 3: Generate input components
         input_components = []
         for component_type in analysis.input_components:
@@ -119,21 +141,23 @@ class UIGenerator(dspy.Module):
             )
             output_components.append(component.component_code)
         
-        # Step 5: Generate example cases display
-        example_component = self.generate_component(
-            task_type=analysis.task_type,
-            component_type="example_display",
-            requirements=f"Display example cases from data path: {data_path}",
-            model_info=str(model_info)
-        )
-        output_components.append(example_component.component_code)
+        # Step 5: Generate example cases display if data_path exists
+        example_component = None
+        if data_path and os.path.exists(data_path):
+            example_component = self.generate_component(
+                task_type=analysis.task_type,
+                component_type="example_display",
+                requirements=f"Display example cases from data path: {data_path}",
+                model_info=str(model_info)
+            ).component_code
         
         # Step 6: Generate complete UI layout
         complete_ui = self.generate_layout(
-            task_name=task_data.get('task', {}).get('name', 'Untitled Task'),
-            task_description=task_data.get('task', {}).get('description', 'No description provided.'),
+            task_name=task_data.get('task_description', {}).get('type', 'Untitled Task'),
+            task_description=task_data.get('task_description', {}).get('description', 'No description provided.'),
             input_components=input_components,
             output_components=output_components,
+            example_component=example_component,
             api_integration=api_integration.integration_code
         )
         
@@ -153,12 +177,10 @@ class DataProcessor(dspy.Module):
     
     def process_input(self, input_data: Any, model_format: Dict) -> Any:
         """Preprocess input data to match model requirements"""
-        # Implementation would depend on specific task type
         pass
     
     def process_output(self, model_output: Any, display_format: Dict) -> Any:
         """Postprocess model output for display"""
-        # Implementation would depend on specific task type
         pass
 
 class AutoUIGenerator:
@@ -197,19 +219,14 @@ class AutoUIGenerator:
 
 # Example usage
 if __name__ == "__main__":
-    # Initialize the generator
     generator = AutoUIGenerator()
-    
-    # Generate UI for a task problem
-    task_name = "audio_classification_verified"
+    task_name = "text_classification_verified"
     task_problem_dir = f"../problems/{task_name}"
     ui_html = generator.generate_ui(task_problem_dir)
     ui_html = "\n".join(
         line for line in ui_html.splitlines()
         if "```" not in line
     )
-
     os.makedirs("../results", exist_ok=True)
     generator.save_ui(ui_html, f"../results/{task_name}_generated_ui.html")
-    
     print("UI Generator System initialized successfully!")

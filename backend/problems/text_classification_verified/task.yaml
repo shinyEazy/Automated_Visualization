@@ -35,19 +35,23 @@ task_description:
             - Display the prediction result (emotion, emotion probabilities, emoji).
 
 model_information:
-  api_url: ""
+  api_url: "http://34.87.113.245:8000/api/text-classification"
   name: j-hartmann/emotion-english-distilroberta-base
   description: The model was trained on 6 diverse datasets and predicts Ekman's 6 basic emotions, plus a neutral class.
-  architectures: RobertaForSequenceClassification
   input_format: 
-    format: string
-    description: A text passage written by the author.
+    type: json
+    structure:
+      texts:
+        type: string
+        description: A text passage written by the author.
   output_format: 
     description: A list of dict contains emotions (labels) and their corresponding scores (probabilities).
-    format: List[dict]
+    type: List[dict]
     structure:
-      label: string  # The name of the predicted emotion (e.g., "joy", "anger").
-      score: float   # The probability score corresponding to that emotion.
+      label: 
+        type: string
+      score: 
+        type: float
   parameters:
     config:
       id2label:
