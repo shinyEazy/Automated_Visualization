@@ -35,7 +35,6 @@ class APIIntegration(dspy.Signature):
     api_url: str = dspy.InputField()
     input_format: str = dspy.InputField()
     output_format: str = dspy.InputField()
-    sample_code: str = dspy.InputField(desc="Sample code or usage notes if available")
     integration_code: str = dspy.OutputField(desc="JavaScript code for API integration")
 
 class UILayoutGeneration(dspy.Signature):
@@ -65,12 +64,11 @@ class UIGenerator(dspy.Module):
         analysis = self.analyze_task(task_yaml_content=task_yaml_content)
 
         # Step 2: Generate API integration code
-        model_info = task_data.get('model', {})
+        model_info = task_data.get('model_information', {})
         api_integration = self.generate_api_integration(
             api_url=model_info.get('api_url', ''),
             input_format=str(model_info.get('input_format', {})),
             output_format=str(model_info.get('output_format', {})),
-            sample_code=model_info.get('sample_code', '')
         )
 
         # Step 3: Generate input components
@@ -106,9 +104,10 @@ class UIGenerator(dspy.Module):
 
         # Step 6: Generate complete UI layout
         complete_ui = self.generate_layout(
-            task_description=task_data.get('task', {}).get('description', ''),
+            task_description=task_data.get('task_description', {}).get('description', 'No description provided.'),
             input_components=input_components,
             output_components=output_components,
+            example_component=example_component,
             api_integration=api_integration.integration_code
         )
 

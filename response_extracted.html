@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Classification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        anger: '#ef4444',
+                        disgust: '#22c55e',
+                        fear: '#8b5cf6',
+                        joy: '#f59e0b',
+                        neutral: '#64748b',
+                        sadness: '#3b82f6',
+                        surprise: '#ec4899'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .emotion-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        .history-item {
+            transition: all 0.3s ease;
+        }
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-3">Emotion Classification</h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                Analyze text to detect emotions: anger, disgust, fear, joy, neutral, sadness, or surprise.
+                Powered by a state-of-the-art NLP model trained on diverse datasets.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Input Section -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Analyze Text</h2>
+                <form id="emotion-form">
+                    <div class="mb-4">
+                        <label for="text-input" class="block text-gray-700 font-medium mb-2">Enter your text:</label>
+                        <textarea 
+                            id="text-input" 
+                            rows="5" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                            placeholder="Type or paste text here to analyze its emotional content..."
+                            required></textarea>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <button 
+                            id="analyze-btn"
+                            type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-300 flex items-center">
+                            <i class="fas fa-brain mr-2"></i> Analyze Emotion
+                        </button>
+                        <button 
+                            type="button"
+                            id="example-btn"
+                            class="text-gray-600 hover:text-blue-600 font-medium">
+                            <i class="fas fa-lightbulb mr-1"></i> Load Example
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Result Section -->
+                <div id="result-section" class="mt-8 hidden">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Analysis Result</h2>
+                    <div class="bg-gray-50 rounded-xl p-5">
+                        <!-- Emoji Display -->
+                        <div class="text-center mb-6">
+                            <div id="result-emoji" class="text-7xl mb-2"></div>
+                            <div id="result-emotion" class="text-2xl font-bold"></div>
+                        </div>
+                        
+                        <!-- Emotion Probabilities -->
+                        <div class="mb-6">
+                            <h3 class="font-semibold text-gray-700 mb-3">Emotion Probabilities:</h3>
+                            <div id="probability-bars" class="space-y-3"></div>
+                        </div>
+                        
+                        <!-- Confidence Meter -->
+                        <div class="mt-6">
+                            <h3 class="font-semibold text-gray-700 mb-2">Confidence Level:</h3>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="confidence-bar" class="h-2.5 rounded-full bg-blue-600" style="width: 0%"></div>
+                            </div>
+                            <div id="confidence-value" class="text-right text-sm text-gray-600 mt-1">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Analysis History</h2>
+                    <button id="clear-history" class="text-gray-500 hover:text-red-500">
+                        <i class="fas fa-trash-alt mr-1"></i> Clear
+                    </button>
+                </div>
+                
+                <div id="history-container" class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                    <div class="text-center py-10 text-gray-400" id="empty-history-message">
+                        <i class="fas fa-history text-4xl mb-3"></i>
+                        <p>Your analyzed texts will appear here</p>
+                    </div>
+                    <!-- History items will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">About the Model</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">Model Information</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex"><i class="fas fa-cube mt-1 mr-2 text-blue-500"></i> <span><strong>Name:</strong> j-hartmann/emotion-english-distilroberta-base</span></li>
+                        <li class="flex"><i class="fas fa-database mt-1 mr-2 text-blue-500"></i> <span><strong>Trained on:</strong> 6 diverse datasets with 58k curated comments</span></li>
+                        <li class="flex"><i class="fas fa-project-diagram mt-1 mr-2 text-blue-500"></i> <span><strong>Emotions:</strong> Ekman's 6 basic emotions + neutral</span></li>
+                        <li class="flex"><i class="fas fa-server mt-1 mr-2 text-blue-500"></i> <span><strong>API Endpoint:</strong> http://34.87.113.245:8000/api/text-classification</span></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">Emotion Key</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex items-center"><div class="w-4 h-4 bg-anger rounded mr-2"></div> Anger</div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-disgust rounded mr-2"></div> Disgust</div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-fear rounded mr-2"></div> Fear</div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-joy rounded mr-2"></div> Joy</div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-neutral rounded mr-2"></div> Neutral</div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-sadness rounded mr-2"></div> Sadness</div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-surprise rounded mr-2"></div> Surprise</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Emotion configuration
+        const EMOTIONS = {
+            anger: { emoji: '😠', color: 'anger' },
+            disgust: { emoji: '🤢', color: 'disgust' },
+            fear: { emoji: '😨', color: 'fear' },
+            joy: { emoji: '😄', color: 'joy' },
+            neutral: { emoji: '😐', color: 'neutral' },
+            sadness: { emoji: '😢', color: 'sadness' },
+            surprise: { emoji: '😲', color: 'surprise' }
+        };
+
+        // API configuration
+        const API_URL = "http://34.87.113.245:8000/api/text-classification";
+        
+        // DOM elements
+        const emotionForm = document.getElementById('emotion-form');
+        const textInput = document.getElementById('text-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const exampleBtn = document.getElementById('example-btn');
+        const resultSection = document.getElementById('result-section');
+        const resultEmoji = document.getElementById('result-emoji');
+        const resultEmotion = document.getElementById('result-emotion');
+        const probabilityBars = document.getElementById('probability-bars');
+        const confidenceBar = document.getElementById('confidence-bar');
+        const confidenceValue = document.getElementById('confidence-value');
+        const historyContainer = document.getElementById('history-container');
+        const emptyHistoryMessage = document.getElementById('empty-history-message');
+        const clearHistoryBtn = document.getElementById('clear-history');
+        
+        // Load history from localStorage
+        let history = JSON.parse(localStorage.getItem('emotionHistory')) || [];
+        
+        // Initialize history display
+        function renderHistory() {
+            historyContainer.innerHTML = '';
+            
+            if (history.length === 0) {
+                historyContainer.appendChild(emptyHistoryMessage);
+                emptyHistoryMessage.classList.remove('hidden');
+                return;
+            }
+            
+            emptyHistoryMessage.classList.add('hidden');
+            
+            // Show latest first
+            [...history].reverse().forEach((item, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item bg-gray-50 rounded-lg p-4 border border-gray-200';
+                historyItem.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-start">
+                            <div class="text-3xl mr-3">${EMOTIONS[item.predictedEmotion].emoji}</div>
+                            <div>
+                                <div class="font-semibold text-${EMOTIONS[item.predictedEmotion].color}">${item.predictedEmotion.charAt(0).toUpperCase() + item.predictedEmotion.slice(1)}</div>
+                                <div class="text-sm text-gray-500">${new Date(item.timestamp).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs font-semibold px-2 py-1 rounded bg-${EMOTIONS[item.predictedEmotion].color}/10 text-${EMOTIONS[item.predictedEmotion].color}">
+                            ${Math.round(item.confidence * 100)}%
+                        </div>
+                    </div>
+                    <div class="mt-3 text-gray-700 text-sm line-clamp-2">${item.text}</div>
+                    <div class="mt-3 flex justify-end">
+                        <button class="view-details text-blue-600 hover:text-blue-800 text-sm font-medium" data-index="${history.length - 1 - index}">
+                            View Details <i class="fas fa-chevron-right ml-1 text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                historyContainer.appendChild(historyItem);
+            });
+            
+            // Add event listeners to view details buttons
+            document.querySelectorAll('.view-details').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    showHistoryDetails(history[index]);
+                });
+            });
+        }
+        
+        // Show detailed view of a history item
+        function showHistoryDetails(item) {
+            // Populate the input field
+            textInput.value = item.text;
+            
+            // Show the result section
+            resultSection.classList.remove('hidden');
+            
+            // Display the main result
+            resultEmoji.textContent = EMOTIONS[item.predictedEmotion].emoji;
+            resultEmotion.textContent = item.predictedEmotion.charAt(0).toUpperCase() + item.predictedEmotion.slice(1);
+            resultEmotion.className = `text-2xl font-bold text-${EMOTIONS[item.predictedEmotion].color}`;
+            
+            // Display confidence
+            const confidencePercent = Math.round(item.confidence * 100);
+            confidenceBar.style.width = `${confidencePercent}%`;
+            confidenceValue.textContent = `${confidencePercent}%`;
+            
+            // Display probability bars
+            probabilityBars.innerHTML = '';
+            item.probabilities.forEach(emotion => {
+                const percent = Math.round(emotion.score * 100);
+                const bar = document.createElement('div');
+                bar.className = 'flex items-center';
+                bar.innerHTML = `
+                    <div class="w-24 text-sm text-gray-600">${emotion.label}</div>
+                    <div class="flex-1 ml-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="emotion-bar h-2.5 rounded-full bg-${EMOTIONS[emotion.label].color}" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                    <div class="w-10 text-right text-sm text-gray-600">${percent}%</div>
+                `;
+                probabilityBars.appendChild(bar);
+            });
+            
+            // Scroll to input section
+            document.querySelector('.bg-white.rounded-xl').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Analyze text using the API
+        async function analyzeText(text) {
+            try {
+                // Show loading state
+                analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+                analyzeBtn.disabled = true;
+                
+                // Make request to the API
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ texts: text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.code !== "000") {
+                    throw new Error(data.message || 'API request failed');
+                }
+                
+                // Process the response
+                const emotions = data.data[0];
+                const primaryEmotion = emotions.reduce((max, emotion) => 
+                    emotion.score > max.score ? emotion : max, emotions[0]);
+                
+                // Create history item
+                const historyItem = {
+                    text: text,
+                    predictedEmotion: primaryEmotion.label,
+                    confidence: primaryEmotion.score,
+                    probabilities: emotions,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Add to history and save
+                history.push(historyItem);
+                if (history.length > 20) history.shift(); // Keep only last 20 items
+                localStorage.setItem('emotionHistory', JSON.stringify(history));
+                
+                // Update UI with results
+                showHistoryDetails(historyItem);
+                renderHistory();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}. Please try again.`);
+            } finally {
+                // Reset button
+                analyzeBtn.innerHTML = '<i class="fas fa-brain mr-2"></i> Analyze Emotion';
+                analyzeBtn.disabled = false;
+            }
+        }
+        
+        // Event Listeners
+        emotionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = textInput.value.trim();
+            if (text) {
+                analyzeText(text);
+            }
+        });
+        
+        exampleBtn.addEventListener('click', () => {
+            const examples = [
+                "I can't believe I failed the exam after studying so hard. This is so unfair!",
+                "The sunset over the ocean was absolutely breathtaking today. I feel so grateful to witness such beauty.",
+                "I just found out there might be layoffs at work next month. I don't know what I'll do if I lose my job.",
+                "That movie was so disgusting! I can't believe they showed those graphic scenes without warning.",
+                "You got me the concert tickets? Oh my god, this is the best surprise ever! I'm so excited!",
+                "The quarterly report shows steady growth in all sectors. We're meeting our targets as projected."
+            ];
+            
+            const randomExample = examples[Math.floor(Math.random() * examples.length)];
+            textInput.value = randomExample;
+        });
+        
+        clearHistoryBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear your analysis history?')) {
+                history = [];
+                localStorage.removeItem('emotionHistory');
+                renderHistory();
+            }
+        });
+        
+        // Initialize
+        renderHistory();
+    </script>
+</body>
+</html>
