@@ -7,8 +7,8 @@ import dotenv
 dotenv.load_dotenv()
 
 endpoint = "https://models.github.ai/inference"
-model = "deepseek/DeepSeek-R1-0528"
-token = os.getenv("GITHUB_ACCESS_TOKEN")
+model = "deepseek/DeepSeek-V3-0324"
+token = os.getenv("GITHUB_TOKEN")
 
 client = ChatCompletionsClient(
     endpoint=endpoint,
@@ -157,7 +157,7 @@ Important:
 """
         ),
     ],
-    max_tokens=16000,
+    max_tokens=8000,
     model=model
 )
 
