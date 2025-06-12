@@ -12,3 +12,5 @@ class ImageToBase64:
 if __name__ == "__main__":
     image_path = r"C:\Users\ASUS\Desktop\workspace\Automated_Visualization\backend\problems\object_detection_in_image\data\000000001257.jpg"
     print(ImageToBase64().image_to_base64(image_path))
+    with open("base64_image.txt", "w") as f:
+        f.write(ImageToBase64().image_to_base64(image_path))
