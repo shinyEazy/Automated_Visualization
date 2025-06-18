@@ -32,7 +32,7 @@ task_description:
             - Display the inferred emotions with probabilities and emoji.
 
 model_information:
-  api_url: "http://34.87.113.245:8000/api/audio-classification"
+  api_url: "http://34.142.220.207:8000/api/audio-classification"
   name: antonjaragon/emotions_6_classes_small
   description: This model is a fine-tuned version of facebook/wav2vec2-base on the 'Audio emotions' public dataset, available form https://www.kaggle.com/datasets/uldisvalainis/audio-emotions.
   input_format: 

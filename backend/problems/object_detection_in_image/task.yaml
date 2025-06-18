@@ -22,7 +22,7 @@ task_description:
             - Display the prediction result (bounding box, class).
 
 model_information:
-  api_url: "http://34.87.113.245:8000/api/object-detect"
+  api_url: "http://34.142.220.207:8000/api/object-detect"
   name: ultralytics/yolo11
   description: The model was trained on the COCO dataset.
   architectures: YOLO

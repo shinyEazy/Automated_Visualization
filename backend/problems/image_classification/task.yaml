@@ -24,7 +24,7 @@ task_description:
             - Display the prediction result (label, label probability).
 
 model_information:
-  api_url: "http://34.87.113.245:8000/api/image-classification"
+  api_url: "http://34.142.220.207:8000/api/image-classification"
   name: timm/mobilenetv3_small_100.lamb_in1k
   input_format:
     type: json

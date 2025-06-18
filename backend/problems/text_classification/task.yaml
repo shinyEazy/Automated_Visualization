@@ -35,7 +35,7 @@ task_description:
             - Display the prediction result (emotion, emotion probabilities, emoji).
 
 model_information:
-  api_url: "http://34.87.113.245:8000/api/text-classification"
+  api_url: "http://34.142.220.207:8000/api/text-classification"
   name: j-hartmann/emotion-english-distilroberta-base
   description: The model was trained on 6 diverse datasets and predicts Ekman's 6 basic emotions, plus a neutral class.
   input_format: 
