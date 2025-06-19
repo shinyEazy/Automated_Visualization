@@ -20,6 +20,10 @@ class TaskAnalysis(dspy.Signature):
     ui_requirements: str = dspy.OutputField(desc="Summary of UI requirements and features needed")
     input_components: list[str] = dspy.OutputField(desc="List of input components needed (e.g., file upload, text input)")
     output_components: list[str] = dspy.OutputField(desc="List of output components needed (e.g., image display, text results)")
+    input_payload: str = dspy.OutputField(desc="Input payload for the model API")
+    output_payload: str = dspy.OutputField(desc="Output payload for the model API")
+    input_type: str = dspy.OutputField(desc="Type of input (image, text, audio, etc.)")
+    output_type: str = dspy.OutputField(desc="Type of output (image, text, json, etc.)")
 
 class UIComponentGeneration(dspy.Signature):
     """Generate specific UI component code based on task requirements with the following design specifications:
@@ -40,7 +44,6 @@ class UIComponentGeneration(dspy.Signature):
       - Text inputs: <textarea> or <input type="text"> based on requirements, with class "w-full p-2 ..."
       - Images: <img class="max-w-full h-auto rounded-lg">, ensure it has an ID for updating src.
       - Text outputs: <p class="text-lg mt-2"> or <div class="text-lg mt-2"> for displaying structured results.
-      - Example display: List examples in <div class="p-4 bg-gray-100 rounded-lg mb-4"> with a button <button class="bg-[rgb(80,141,78)] text-white px-3 py-1 rounded hover:bg-[rgb(26,83,25)]" onclick="loadExample(index)">Load Example</button>, include <script> with const examples = [...]
     """
     
     task_type: str = dspy.InputField()
@@ -50,7 +53,8 @@ class UIComponentGeneration(dspy.Signature):
     component_code: str = dspy.OutputField(desc="HTML/JavaScript code for the component with appropriate Tailwind CSS classes")
 
 class APIIntegration(dspy.Signature):
-    """Generate frontend API integration code with the following requirements:
+    """
+    Generate frontend API integration code with the following requirements:
     - Only handle data collection and submission to backend
     - Convert file inputs to base64 for sending to backend.
     - Send raw input directly to backend endpoint "http://127.0.0.1:5000/predict"
@@ -61,8 +65,19 @@ class APIIntegration(dspy.Signature):
     - Support multiple input types (file, text, etc.) by creating a FormData object or JSON payload.
     - For image output, set the src of the output image element.
     - For text/JSON output, update a dedicated div/pre element.
+    - Parse the output payload to get the data and display it in the appropriate output component using for each.
+    - For text/JSON output:
+        - If output is JSON, pretty-print it with JSON.stringify(response, null, 2)
+        - If output is array of objects, create formatted display (e.g., table or list)
+        - Never display raw [object Object]
     """
     
+    input_payload: str = dspy.InputField(desc="Input payload to the server")
+    # Emphasize the nested array and the desire for row-by-row display.
+    output_payload: str = dspy.InputField(desc="""Output payload from the server.
+        Expected structure for text/JSON output: { "data": { "code": "000", "data": [[{ "label": "...", "score": "..." }]], "message": "..." } }.
+        For the 'data' array of objects (e.g., [{ "label": "anger", "score": 0.067 }]), display each object's 'label' and 'score' in a separate row within the output component (e.g., a table or list).
+    """)
     task_type: str = dspy.InputField(desc="Type of the task")
     input_components: list[str] = dspy.InputField(desc="List of input component types (e.g., file, text)")
     output_components: list[str] = dspy.InputField(desc="List of output component types (e.g., image, text)")
@@ -77,12 +92,11 @@ class UILayoutGeneration(dspy.Signature):
       - Font: font-mono
     - Structure:
       - Wrap in <div class="min-h-screen bg-[rgb(214,239,216)] text-[rgb(26,83,25)] font-mono">
-      - Header: <div class="bg-[rgb(128,175,129)] text-white p-4 sticky top-0 z-10"> with <h1 class="text-2xl font-bold">{task_name}</h1> and <p class="mt-1">{task_description}</p>
+      - Header: <div class="bg-[rgb(128,175,129)] text-white p-4 sticky top-0 z-10"> with <h1 class="text-2xl font-bold">{task_name}</h1></p>
       - Main content: <main class="container mx-auto p-4">
       - Layout: <div class="flex flex-col md:flex-row gap-6">
         - Inputs: <div class="flex-1 bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"> with input_components and <button id="submit-btn" class="mt-4 bg-[rgb(128,175,129)] text-white px-4 py-2 rounded hover:bg-[rgb(80,141,78)] transition duration-300">Submit</button> and <div id="error-message" class="text-red-500 mt-2"></div>
         - Outputs: <div class="flex-1 bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-300"> with output_components
-      - Examples (if provided): <div class="mt-6 bg-white p-6 rounded-2xl shadow-lg">{example_component}</div>
     - Include api_integration in <script> at the end of <body>
     - Ensure responsiveness: Stack vertically on small screens, side-by-side on medium+ screens
     """
@@ -91,32 +105,49 @@ class UILayoutGeneration(dspy.Signature):
     task_description: str = dspy.InputField(desc="Description of the task")
     input_components: list[str] = dspy.InputField(desc="List of HTML strings for input components")
     output_components: list[str] = dspy.InputField(desc="List of HTML strings for output components")
-    example_component: str = dspy.InputField(desc="HTML string for example display component", default=None)
     api_integration: str = dspy.InputField(desc="JavaScript code for API integration")
     complete_html: str = dspy.OutputField(desc="Complete HTML page with CSS and JavaScript, styled according to the design specifications")
 
 class BackendGeneration(dspy.Signature):
-    """Generate Python Flask backend code for processing user inputs, calling an external model API, and processing its output.
+    """Generate Python Flask backend code with the following specifications:
     
-    Requirements:
-    - Use Flask framework with CORS.
-    - Create a root endpoint: `@app.route('/')` which can return a simple message.
-    - Create a prediction endpoint: `@app.route('/predict', methods=['POST'])`.
-    - Handle image file uploads:
-        - Receive base64 encoded image data from the frontend.
-        - Decode the base64 string to bytes.
-    - Call the external model API as specified in model_info.api_url.
-        - The external API expects a JSON payload: `{"data": "base64_encoded_image_string"}`.
-        - Use `requests` library for the API call.
-    - Process the model API response:
-        - The model API returns a list of objects with 'class', 'class_name', 'confidence', 'bbox'.
-        - Use Pillow (PIL) to load the *original* input image (decoded from base64).
-        - Draw bounding boxes and class names onto this image based on the model's predictions.
-        - Re-encode the *processed image* (with bounding boxes) back to base64.
-    - Return a JSON response to the frontend: `{"success": bool, "result": {"processed_image": "base64_encoded_image", "detections": [...]}, "error": optional_message}`.
-    - Include comprehensive error handling for file processing, API calls, and image drawing.
+    1. Framework & Setup:
+    - Use Flask with flask_cors.CORS
+    - Create an endpoint ('/predict')
+    
+    2. Prediction Endpoint (POST /predict):
+    a) Input Handling:
+       - Accept JSON payload with structure: {{input_payload}}
+       - Validate input_type and data presence
+    
+    b) Processing Pipeline:
+       IMAGE PATH:
+        1. Decode base64 to bytes
+        2. Send to model API: {{input_payload}}
+        3. Process response:
+           - Parse JSON, extract predictions: result['data']
+           - Load original image with PIL
+           - Draw bounding boxes + labels using prediction data
+           - Encode processed image to base64
+        4. Return: {{output_payload}}
+        
+       TEXT PATH:
+        1. Directly send text payload to model API: {{input_payload}}
+        2. Return: {{output_payload}}
+    
+    c) Model API Call:
+       - URL: from `model_info.api_url`
+       - Use requests.post()
+    
+    3. Response Standardization:
+    - Always return JSON: {{output_payload['data']}}
+    
+    Note: Maintain clear separation between image/text pipelines.
+    Use helper functions for modularity.
     """
     
+    input_payload: str = dspy.InputField(desc="Input payload for the model API")
+    output_payload: str = dspy.InputField(desc="Output payload for the model API")
     task_type: str = dspy.InputField(desc="Type of the task (e.g., object_detection)")
     model_info: str = dspy.InputField(desc="Model API information and format requirements, including api_url, input_format, and output_format.")
     backend_code: str = dspy.OutputField(desc="Python Flask backend code")
@@ -144,19 +175,74 @@ class UIGenerator(dspy.Module):
         # Step 2: Generate backend code
         backend = self.generate_backend(
             task_type=analysis.task_type,
-            model_info=json.dumps(model_info) # Pass model_info as a JSON string
+            input_payload=analysis.input_payload,
+            output_payload=analysis.output_payload,
+            model_info=json.dumps(model_info)
         )
 
         # Step 3: Generate API integration for frontend
-        # Extract component types from analysis.input_components and analysis.output_components
-        # For this specific object detection task, input is 'image' (file upload), output is 'image' (display) and 'text' (detections)
-        frontend_input_types = ['file'] # Assuming 'file' for image upload
-        frontend_output_types = ['image', 'text'] # Image with boxes, and detection details
+        COMPONENT_MAPPING = {
+            "image": {
+                "input": "input_file",
+                "output": "output_image"
+            },
+            "text": {
+                "input": "input_text",
+                "output": "output_text"
+            },
+            "json": {
+                "output": "output_json"
+            }
+        }
+
+        input_component_type = COMPONENT_MAPPING[analysis.input_type]["input"]
+        output_component_type = COMPONENT_MAPPING[analysis.output_type]["output"]
 
         api_integration = self.generate_api_integration(
             task_type=analysis.task_type,
-            input_components=frontend_input_types,
-            output_components=frontend_output_types
+            input_components=input_component_type,
+            output_components=output_component_type,
+            input_payload="{\"texts\": List of strings} or {\"images\": List of images}",
+            output_payload="""
+{
+    "data": {
+        "code": "000",
+        "data": [
+            [
+                {
+                    "label": "anger",
+                    "score": 0.10536875575780869
+                },
+                {
+                    "label": "disgust",
+                    "score": 0.15130650997161865
+                },
+                {
+                    "label": "fear",
+                    "score": 0.030560608953237534
+                },
+                {
+                    "label": "joy",
+                    "score": 0.01893160678446293
+                },
+                {
+                    "label": "neutral",
+                    "score": 0.6386061906814575
+                },
+                {
+                    "label": "sadness",
+                    "score": 0.03592739254236221
+                },
+                {
+                    "label": "surprise",
+                    "score": 0.019298972561955452
+                }
+            ]
+        ],
+        "message": "Thành công"
+    }
+}
+"""
         )
 
         # Step 4: Generate input components
@@ -185,29 +271,12 @@ class UIGenerator(dspy.Module):
             model_info=json.dumps(model_info)
         ).component_code)
         
-        # Step 6: Generate example cases display (simplified as data_path might not be directly usable for in-browser examples without server-side support)
-        example_component = None
-        # For object detection, handling examples directly in frontend without a server to serve images is complex.
-        # This part might need further refinement for a robust solution.
-        # For now, we'll generate a placeholder or skip if `data_path` is present but not configured for client-side loading.
-        if data_path and os.path.exists(data_path):
-            # A more sophisticated approach would be needed here to read data and prepare it for JS
-            # For now, we'll just indicate that examples are available.
-            example_component = f"""
-            <div class="p-4 bg-gray-100 rounded-lg mb-4">
-                <h3 class="text-xl font-semibold mb-2">Example Cases</h3>
-                <p>Example data is available in the '{data_path}' directory. Loading examples directly in the browser requires server-side setup.</p>
-                <button class="bg-[rgb(80,141,78)] text-white px-3 py-1 rounded hover:bg-[rgb(26,83,25)]" onclick="alert('Loading examples not yet implemented for direct client-side display without server support.')">Load Example</button>
-            </div>
-            """
-        
         # Step 7: Generate complete UI layout
         complete_ui = self.generate_layout(
             task_name=task_data.get('task_description', {}).get('type', 'Untitled Task'),
             task_description=task_data.get('task_description', {}).get('description', 'No description provided.'),
             input_components=input_components_html,
             output_components=output_components_html,
-            example_component=example_component,
             api_integration=api_integration.integration_code
         )
         
@@ -265,7 +334,6 @@ class AutoUIGenerator:
         print(f"Frontend saved to {ui_path}")
         print(f"Backend saved to {backend_path}")
 
-# Example usage
 if __name__ == "__main__":
     generator = AutoUIGenerator()
     task_name = "object_detection_in_image"
