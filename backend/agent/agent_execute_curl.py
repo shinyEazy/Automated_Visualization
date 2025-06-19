@@ -16,9 +16,6 @@ except FileNotFoundError:
     print(f"❌ Error: The file '{curl_file_path}' was not found.")
     sys.exit(1)
 
-# Debug: show the command being parsed
-print("🌀 Parsing cURL command:\n", curl_command)
-
 # Parse using uncurl
 try:
     python_code = uncurl.parse(curl_command)

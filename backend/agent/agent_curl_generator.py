@@ -9,6 +9,12 @@ task_name = "text_classification"
 with open("tools/base64_image.txt", "r") as f:
     BASE64_IMAGE = f.read()
 
+with open("tools/audio_data.txt", "r") as f:
+    AUDIO_DATA = f.read()
+
+with open("tools/sampling_rate.txt", "r") as f:
+    SAMPLING_RATE = f.read()
+
 MCP_SERVERS = {
     "filesystem_server": StdioServerParameters(
         command="npx",
@@ -69,6 +75,8 @@ async def run(task_description):
         print(result)
         curl_command = result.curl_command
         curl_command = re.sub(r'("data"\s*:\s*")([^"]*base64[^"]*)(")', rf'\1{BASE64_IMAGE}\3', curl_command)
+        curl_command = re.sub(r'"audio_data"\s*:\s*\[[^\]]*\]', f'"audio_data": {AUDIO_DATA}', curl_command)
+        curl_command = re.sub(r'"sampling_rate"\s*:\s*\d+', f'"sampling_rate": {SAMPLING_RATE}', curl_command)
         with open("curl_command_generated.txt", "w") as f:
             f.write(curl_command)
     finally:

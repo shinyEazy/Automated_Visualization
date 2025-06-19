@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-lm = dspy.LM("openai/gpt-4.1-nano", api_key=os.getenv("OPENAI_API_KEY"))
+lm = dspy.LM("openai/gpt-4.1-nano", api_key=os.getenv("OPENAI_API_KEY"), cache=False, cache_in_memory=False, max_tokens=16000)
 dspy.configure(lm=lm)
 
 
@@ -36,26 +36,28 @@ def safe_read_file(file_path: str) -> str:
 class TaskAnalysis(dspy.Signature):
     """Analyze task.yaml to extract UI requirements and API specifications."""
     task_yaml_content: str = dspy.InputField(desc="Content of task.yaml")
-    task_type: str = dspy.OutputField(desc="Task type (e.g., object_detection)")
+    task_type: str = dspy.OutputField(desc="Task type")
     ui_requirements: str = dspy.OutputField(desc="Summary of UI requirements")
-    input_components: str = dspy.OutputField(desc="Comma-separated input components (e.g., input_file, input_text)")
-    output_components: str = dspy.OutputField(desc="Comma-separated output components (e.g., output_image, output_text)")
-    input_payload: str = dspy.OutputField(desc="Expected input payload structure for model server")
-    output_payload: str = dspy.OutputField(desc="Expected output payload structure from model server")
-    input_type: str = dspy.OutputField(desc="Primary input type (image, text, audio)")
-    output_type: str = dspy.OutputField(desc="Primary output type (image, text, json)")
+    input_components: str = dspy.OutputField(desc="Comma-separated input components")
+    output_components: str = dspy.OutputField(desc="Comma-separated output components")
+    input_payload: str = dspy.OutputField(desc="Expected input payload structure")
+    output_payload: str = dspy.OutputField(desc="Expected output payload structure")
+    input_type: str = dspy.OutputField(desc="Primary input type")
+    output_type: str = dspy.OutputField(desc="Primary output type")
+    visualization: str = dspy.OutputField(desc="Visualization requirements from YAML")
 
 class UIComponentGeneration(dspy.Signature):
     """Generate UI components with Tailwind styling based on task requirements.
     For file inputs, ensure the 'accept' attribute is correctly set based on input_type.
-    For output components, ensure they are designed to display labels, scores, and emojis if applicable.
+    For output components, ensure they are designed to display response from the model server.
     """
     task_type: str = dspy.InputField()
-    component_type: str = dspy.InputField(desc="Component type (e.g., input_file)")
-    requirements: str = dspy.InputField(desc="Specific requirements for this component")
+    component_type: str = dspy.InputField(desc="Component type")
+    requirements: str = dspy.InputField(desc="Requirements for this component")
     model_info: str = dspy.InputField(desc="Model API specifications")
-    input_type: str = dspy.InputField(desc="Primary input data modality (e.g., audio, image, text).")
-    output_type: str = dspy.InputField(desc="Primary output data modality (e.g., json, label, text, image).")
+    input_type: str = dspy.InputField(desc="Primary input data modality")
+    output_type: str = dspy.InputField(desc="Primary output data modality")
+    visualization: str = dspy.InputField(desc="Visualization requirements")
     component_code: str = dspy.OutputField(desc="HTML/JS code for the component")
 
 class APIIntegration(dspy.Signature):
@@ -72,11 +74,12 @@ class APIIntegration(dspy.Signature):
     task_type: str = dspy.InputField()
     model_info: str = dspy.InputField(desc="Model API specifications including api_url")
     input_type: str = dspy.InputField(desc="Primary input modality (audio, image, text, tabular).")
-    output_type: str = dspy.InputField(desc="Primary output modality (json, image, text).")
-    integration_code: str = dspy.OutputField(desc="A complete JavaScript code block. It should contain a function, e.g., 'handleSubmit', that: \n1. Gets input elements by ID. \n2. Reads and preprocesses data as required (e.g., FileReader for base64 encoding of files, text parsing for tabular data). \n3. Constructs the JSON body for the POST request to the 'api_url'. \n4. Uses 'fetch' to call the API. \n5. Handles the JSON or other response data. \n6. Formats and displays the result in the corresponding output element (e.g., populating a '<div>' with formatted text, setting an '<img>' src). \n7. Includes error handling and loading states.")
+    output_type: str = dspy.InputField(desc="Primary output modality (image, text).")
+    visualization: str = dspy.InputField(desc="Visualization requirements")
+    integration_code: str = dspy.OutputField(desc="Complete JavaScript code block")
 
 class UILayoutGeneration(dspy.Signature):
-    """Generate a complete, valid, and responsive HTML5 layout that includes a <html> tag, <head>, <body>, a header, footer, and main content section. Ensure it follows proper HTML syntax and formatting.
+    """Generate a complete, valid, and responsive HTML5 layout that includes a <html> tag, <head>, <body>. Ensure it follows proper HTML syntax and formatting.
     The layout should be responsive and logically arrange the input and output components, ensuring proper integration of the API script.
     """
     task_name: str = dspy.InputField()
@@ -86,12 +89,17 @@ class UILayoutGeneration(dspy.Signature):
     api_integration: str = dspy.InputField(desc="JS integration code for model server")
     complete_html: str = dspy.OutputField(desc="Full HTML page with styling")
 
-class HTMLValidationAndCorrection(dspy.Signature):
-    """Review the generated HTML code for syntax errors, structural issues, and common mistakes.
-    Correct any identified errors to ensure the HTML is valid, well-formed, and adheres to best practices.
+class HTMLValidation(dspy.Signature):
+    """Validate and optimize HTML UI based on payload requirements.
+    Remove redundant components that don't match payload structures.
+    Ensure all required fields from payload exist in UI components.
+    Fix syntax errors and ensure proper HTML5 structure.
     """
-    html_code: str = dspy.InputField(desc="The full HTML code to validate and correct.")
-    corrected_html: str = dspy.OutputField(desc="The corrected and validated HTML code. If no errors are found, return the original HTML.")
+    html_code: str = dspy.InputField(desc="Generated HTML code to validate")
+    task_type: str = dspy.InputField(desc="Type of ML task")
+    input_payload: str = dspy.InputField(desc="Actual input payload structure")
+    output_payload: str = dspy.InputField(desc="Actual output payload structure")
+    optimized_html: str = dspy.OutputField(desc="Fixed HTML with: 1. Removed redundant components 2. Added missing fields 3. Syntax corrections")
 
 class UIGenerator(dspy.Module):
     def __init__(self):
@@ -100,8 +108,8 @@ class UIGenerator(dspy.Module):
         self.generate_component = dspy.ChainOfThought(UIComponentGeneration)
         self.generate_api_integration = dspy.ChainOfThought(APIIntegration)
         self.generate_layout = dspy.ChainOfThought(UILayoutGeneration)
-        self.validate_html = dspy.ChainOfThought(HTMLValidationAndCorrection)
-    
+        self.html_validation = dspy.ChainOfThought(HTMLValidation)
+        
     def forward(self, task_yaml_path: str):
         task_yaml_content = safe_read_file(task_yaml_path)
         
@@ -111,7 +119,7 @@ class UIGenerator(dspy.Module):
             raise ValueError(f"Invalid YAML content in {task_yaml_path}: {e}")
         
         model_info = task_data.get("model_information", {})
-
+        visualization = task_data.get("visualize", {})
         # Step 1: Analyze task requirements
         analysis = self.analyze_task(task_yaml_content=task_yaml_content)
         
@@ -133,11 +141,12 @@ class UIGenerator(dspy.Module):
             task_type=analysis.task_type,
             input_components=analysis.input_components,
             output_components=analysis.output_components,
-            input_payload=input_payload[:400],
-            output_payload=output_payload[:400],
+            input_payload=input_payload[:1000],
+            output_payload=output_payload[:1000],
             model_info=json.dumps(model_info),
             input_type=analysis.input_type,
-            output_type=analysis.output_type
+            output_type=analysis.output_type,
+            visualization=json.dumps(visualization)
         )
 
         # Step 3: Generate input components
@@ -149,7 +158,8 @@ class UIGenerator(dspy.Module):
                 requirements=f"Generate an input component of type \'{comp_type}\' for a \'{analysis.task_type}\' task. Ensure the 'accept' attribute is correctly set for file inputs based on the input type: {analysis.input_type}.",
                 model_info=json.dumps(model_info),
                 input_type=analysis.input_type,
-                output_type=analysis.output_type
+                output_type=analysis.output_type,
+                visualization=json.dumps(visualization)
             )
             input_components_html.append(comp.component_code)
         
@@ -162,7 +172,8 @@ class UIGenerator(dspy.Module):
                 requirements=f"Generate an output component of type \'{comp_type}\' for a \'{analysis.task_type}\' task. Ensure it is designed to display labels, scores, and emojis if the output type is \'{analysis.output_type}\' and the task requires it.",
                 model_info=json.dumps(model_info),
                 input_type=analysis.input_type,
-                output_type=analysis.output_type
+                output_type=analysis.output_type,
+                visualization=json.dumps(visualization)
             )
             output_components_html.append(comp.component_code)
         
@@ -175,11 +186,15 @@ class UIGenerator(dspy.Module):
             api_integration=api_integration.integration_code
         )
 
-        # Step 6: Validate and correct the generated HTML
-        validated_html = self.validate_html(html_code=complete_ui.complete_html)
+        final_ui = self.html_validation(
+            html_code=complete_ui.complete_html,
+            input_payload=input_payload[:1000],
+            output_payload=output_payload[:1000],
+            task_type=analysis.task_type
+        )
         
         return dspy.Prediction(
-            ui_html=validated_html.corrected_html,
+            ui_html=final_ui.optimized_html,
             analysis=analysis
         )
 
@@ -212,7 +227,7 @@ class AutoUIGenerator:
 
 if __name__ == "__main__":
     generator = AutoUIGenerator()
-    task_name = "tabular_question_answering"
+    task_name = "text_classification"
     task_problem_dir = f"../problems/{task_name}"
     
     try:
