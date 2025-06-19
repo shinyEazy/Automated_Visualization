@@ -4,7 +4,7 @@ import dspy
 import asyncio
 import re
 
-task_name = "object_detection_in_image"
+task_name = "text_classification"
 
 with open("tools/base64_image.txt", "r") as f:
     BASE64_IMAGE = f.read()
@@ -59,7 +59,7 @@ class CurlGenerator(dspy.Signature):
     task_description: str = dspy.InputField(desc="The task description")
     curl_command: str = dspy.OutputField(desc="The mock curl command to call the API")
 
-dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"))
+dspy.configure(lm=dspy.LM("openai/gpt-4.1-nano"))
 
 async def run(task_description):
     all_tools, sessions = await get_all_tools()
