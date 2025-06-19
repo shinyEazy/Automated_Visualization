@@ -4,4 +4,5 @@ with open("response.json", "r") as f:
     output_payload = f.read()
 
 
-print(input_payload[:250])
+print(input_payload[:400])
+print(output_payload[:2000])

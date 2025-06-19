@@ -5,7 +5,7 @@ import json
 
 try:
     with open("curl_command_generated.txt", "r") as file:
-        curl_command = file.read().strip()
+        curl_command = ' '.join(file.read().strip().splitlines())
     if not curl_command:
         print("Error: The file 'curl_command_generated.txt' is empty.")
         sys.exit(1)
