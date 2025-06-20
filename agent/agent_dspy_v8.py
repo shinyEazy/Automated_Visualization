@@ -114,6 +114,25 @@ class HTMLValidation(dspy.Signature):
     output_payload: str = dspy.InputField(desc="Actual output payload structure")
     optimized_html: str = dspy.OutputField(desc="Fixed HTML with: 1. Removed redundant components 2. Added missing fields 3. Syntax corrections")
 
+#Style
+class UIRefinement(dspy.Signature):
+    """
+    Refactor and beautify an existing HTML/CSS UI to follow modern, user-friendly design principles.
+
+    Enhancements should include:
+    - Soft and eye-pleasing background color
+    - Rounded corners and subtle box shadows for depth
+    - Highlighted button styles with interactive hover effects
+    - Clean, readable font choices
+    - Responsive layout for both mobile and desktop devices
+    - Centered layout: align form or main content to the center of the screen both vertically and horizontally
+    - Overall user-friendly, modern, and smooth experience
+    """
+    raw_html: str = dspy.InputField(desc="Original HTML code to improve")
+    user_requirements: str = dspy.InputField(desc="UI/UX improvement guidelines")
+    improved_html: str = dspy.OutputField(desc="Refined, responsive, and modern HTML code")
+
+
 class UIGenerator(dspy.Module):
     def __init__(self):
         super().__init__()
@@ -123,7 +142,9 @@ class UIGenerator(dspy.Module):
         self.generate_layout = dspy.ChainOfThought(UILayoutGeneration)
         self.html_validation = dspy.ChainOfThought(HTMLValidation)
 
-    def forward(self, task_yaml_path: str):
+        self.ui_refinement = dspy.ChainOfThought(UIRefinement)
+
+    def forward(self, task_yaml_path: str, apply_refinement: bool = True):
         task_yaml_content = safe_read_file(task_yaml_path)
         
         try:
@@ -222,6 +243,23 @@ class UIGenerator(dspy.Module):
             output_payload=output_payload,
             task_type=analysis.task_type
         )
+        # New
+        if apply_refinement:
+            refined_ui = self.ui_refinement(
+                raw_html=final_ui.optimized_html,
+                user_requirements="""
+                    - Soft, eye-pleasing background
+                    - Rounded corners with subtle shadow
+                    - Prominent buttons with hover effects
+                    - Clean and readable fonts
+                    - Responsive layout (mobile and desktop)
+                    - Center content (form or main area) horizontally and vertically
+                    - Overall modern and user-friendly design
+                """
+            )
+            html_to_return = refined_ui.improved_html
+        else:
+            html_to_return = final_ui.optimized_html
         
         return dspy.Prediction(
             ui_html=final_ui.optimized_html,
@@ -232,12 +270,13 @@ class AutoUIGenerator:
     def __init__(self):
         self.ui_generator = UIGenerator()
     
-    def generate(self, task_problem_dir: str) -> str:
+    def generate(self, task_problem_dir: str, apply_refinement: bool = True) -> str:
         task_yaml_path = os.path.join(task_problem_dir, "task.yaml")
         if not os.path.exists(task_yaml_path):
             raise FileNotFoundError(f"task.yaml not found in {task_problem_dir}")
         
-        result = self.ui_generator(task_yaml_path=task_yaml_path)
+        # result = self.ui_generator(task_yaml_path=task_yaml_path)
+        result = self.ui_generator(task_yaml_path=task_yaml_path, apply_refinement=apply_refinement)
         return result.ui_html
     
     def save(self, ui_html: str, output_dir: str, task_name: str):
@@ -271,9 +310,12 @@ if __name__ == "__main__":
         print(f"Generating UI for task: {task_name}")
         print(f"Looking for task.yaml in: {task_problem_dir}")
         
-        ui_html = generator.generate(task_problem_dir)
+        # ui_html = generator.generate(task_problem_dir)
+        ui_html = generator.generate(task_problem_dir, apply_refinement=True)
         ui_path = generator.save(ui_html, task_problem_dir, task_name)
         
+        
+
         print("Standalone HTML UI generated successfully!")
         print(f"UI saved to: {ui_path}")
 
