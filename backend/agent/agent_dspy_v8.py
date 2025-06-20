@@ -64,8 +64,20 @@ class APIIntegration(dspy.Signature):
     """Generate frontend API integration code to communicate directly with model server.
     This includes reading data from input components, preprocessing it for the API,
     making the fetch request, and rendering the results in the output components.
-    It should handle different input types (e.g., audio file to base64) and output types (e.g., JSON parsing for labels, scores, and emojis).
+    It should handle different input types:
+      - For audio: use Web Audio API (AudioContext) to process audio files
+        Steps:
+          1. Create AudioContext
+          2. Use FileReader to read audio file
+          3. Decode audio data using audioContext.decodeAudioData()
+          4. Process audio as needed (e.g., convert to required format)
+          5. Optionally visualize waveform using Canvas API
+      - For other types: use appropriate methods (base64 for images, json for tabular data, etc.)
     Include robust error handling and loading states.
+    If the guidance includes `label_mapping.json`, include logic to:
+      1. Fetch `label_mapping.json` file
+      2. Map numeric labels to human-readable names
+      3. Display mapped labels in the UI
     """
     input_components: str = dspy.InputField(desc="Comma-separated list of input component types.")
     output_components: str = dspy.InputField(desc="Comma-separated list of output component types.")
@@ -76,6 +88,7 @@ class APIIntegration(dspy.Signature):
     input_type: str = dspy.InputField(desc="Primary input modality (audio, image, text, tabular).")
     output_type: str = dspy.InputField(desc="Primary output modality (image, text).")
     visualization: str = dspy.InputField(desc="Visualization requirements")
+    guidance: str = dspy.InputField(desc="Additional guidance for the API integration", default="")
     integration_code: str = dspy.OutputField(desc="Complete JavaScript code block")
 
 class UILayoutGeneration(dspy.Signature):
@@ -109,7 +122,7 @@ class UIGenerator(dspy.Module):
         self.generate_api_integration = dspy.ChainOfThought(APIIntegration)
         self.generate_layout = dspy.ChainOfThought(UILayoutGeneration)
         self.html_validation = dspy.ChainOfThought(HTMLValidation)
-        
+
     def forward(self, task_yaml_path: str):
         task_yaml_content = safe_read_file(task_yaml_path)
         
@@ -120,6 +133,9 @@ class UIGenerator(dspy.Module):
         
         model_info = task_data.get("model_information", {})
         visualization = task_data.get("visualize", {})
+        guidance = task_data.get("model_information", {}).get("output_format", {}).get("guidance", "")
+        print("guidance", guidance)
+
         # Step 1: Analyze task requirements
         analysis = self.analyze_task(task_yaml_content=task_yaml_content)
         
@@ -143,16 +159,17 @@ class UIGenerator(dspy.Module):
 
         # Step 2: Generate API integration (frontend -> model server)
         api_integration = self.generate_api_integration(
-            task_type=analysis.task_type,
-            input_components=analysis.input_components,
-            output_components=analysis.output_components,
-            input_payload=input_payload,
-            output_payload=output_payload,
-            model_info=json.dumps(model_info),
-            input_type=analysis.input_type,
-            output_type=analysis.output_type,
-            visualization=json.dumps(visualization)
-        )
+                task_type=analysis.task_type,
+                input_components=analysis.input_components,
+                output_components=analysis.output_components,
+                input_payload=input_payload,
+                output_payload=output_payload,
+                model_info=json.dumps(model_info),
+                input_type=analysis.input_type,
+                output_type=analysis.output_type,
+                visualization=json.dumps(visualization),
+                guidance=guidance
+            )
 
         # Step 3: Generate input components
         input_components_html = []
@@ -219,9 +236,16 @@ class AutoUIGenerator:
         os.makedirs(output_dir, exist_ok=True)
         
         def clean_code(code):
+            match = re.search(r"<html[\s\S]*?</html>", code, re.IGNORECASE)
+            if match:
+                code = match.group(0)
+            else:
+                return ""
+
             code = re.sub(r"```(html|javascript)?\n|\n```", "", code)
             code = code.replace(r"\`", "`")
             code = code.replace(r"\$", "$")
+
             return code.strip()
         
         ui_path = os.path.join(output_dir, f"{task_name}_ui.html")
@@ -232,7 +256,7 @@ class AutoUIGenerator:
 
 if __name__ == "__main__":
     generator = AutoUIGenerator()
-    task_name = "audio_classification_verified"
+    task_name = "object_detection_in_image"
     task_problem_dir = f"../problems/{task_name}"
     
     try:
