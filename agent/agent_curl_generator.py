@@ -70,7 +70,11 @@ async def generate_curl_for_task(task_name: str):
     
     # Process and save curl command
     curl_command = result.curl_command
-    curl_command = re.sub(r'("data"\s*:\s*")([^"]*base64[^"]*)(")', rf'\1{BASE64_IMAGE}\3', curl_command)
+    curl_command = re.sub(
+        r'("(?:image_data|data)"\s*:\s*")([^"]*base64[^"]*)(")', 
+        rf'\1{BASE64_IMAGE}\3', 
+        curl_command
+    )
     curl_command = re.sub(r'"audio_data"\s*:\s*\[[^\]]*\]', f'"audio_data": {AUDIO_DATA}', curl_command)
     curl_command = re.sub(r'"sampling_rate"\s*:\s*\d+', f'"sampling_rate": {SAMPLING_RATE}', curl_command)
     

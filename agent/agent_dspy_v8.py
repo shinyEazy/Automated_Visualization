@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-lm = dspy.LM("openai/gpt-4.1-nano", api_key=os.getenv("OPENAI_API_KEY"), cache=False, cache_in_memory=False, max_tokens=32000, temperature=0)
+lm = dspy.LM("openai/gpt-4.1-nano", api_key=os.getenv("OPENAI_API_KEY"), cache=False, cache_in_memory=False, max_tokens=32000)
 dspy.configure(lm=lm)
 
 
@@ -72,7 +72,8 @@ class APIIntegration(dspy.Signature):
           3. Decode audio data using audioContext.decodeAudioData()
           4. Process audio as needed (e.g., convert to required format)
           5. Optionally visualize waveform using Canvas API
-      - For other types: use appropriate methods (base64 for images, json for tabular data, etc.)
+      - For image: use FileReader to read image file
+      - For tabular: use FileReader to read csv, tsv file and convert to JSON
     Include robust error handling and loading states.
     If the guidance includes `label_mapping.json`, include logic to:
       1. Fetch `label_mapping.json` file
@@ -264,7 +265,7 @@ class AutoUIGenerator:
 
 if __name__ == "__main__":
     generator = AutoUIGenerator()
-    task_name = "object_detection_in_image"
+    task_name = "image_segmentation"
     task_problem_dir = f"problems/{task_name}"
     
     try:
